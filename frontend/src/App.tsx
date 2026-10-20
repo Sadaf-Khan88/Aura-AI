@@ -142,11 +142,24 @@ function App() {
     window.speechSynthesis.speak(utterance)
   }
 
-  function sendMessage(message = input) {
+  async function sendMessage(message = input) {
     const cleanMessage = message.trim()
     if (!cleanMessage) return
 
-    const reply = getReply(cleanMessage)
+    const response = await fetch("http://127.0.0.1:8000/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: cleanMessage }),
+    })
+
+    if (!response.ok) {
+      throw new Error("AURA backend request failed")
+    }
+
+    const data = await response.json()
+    const reply = data.reply
 
     setMessages((previous) => [
       ...previous,
