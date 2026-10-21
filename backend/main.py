@@ -15,8 +15,16 @@ app.add_middleware(
 )
 
 
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
 class ChatRequest(BaseModel):
     message: str
+    history: list[ChatMessage] = []
+
 
 
 @app.get("/")
@@ -30,6 +38,7 @@ def health():
 
 
 
+
 @app.post("/api/chat")
 def chat(request: ChatRequest):
     import requests
@@ -39,21 +48,36 @@ def chat(request: ChatRequest):
     if not message:
         return {"reply": "Please enter a message."}
 
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are AURA, a helpful personal AI assistant. "
+                "Be friendly, clear, and concise."
+            ),
+        }
+    ]
+
+    # Include earlier messages from this conversation.
+    for item in request.history:
+        if item.role in ("user", "assistant") and item.content.strip():
+            messages.append({
+                "role": item.role,
+                "content": item.content.strip(),
+            })
+
+    # Add the newest message last.
+    messages.append({
+        "role": "user",
+        "content": message,
+    })
+
     try:
         response = requests.post(
             "http://localhost:11434/api/chat",
             json={
                 "model": "qwen2.5:1.5b",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are AURA, a helpful personal AI assistant. "
-                            "Be friendly, clear, and concise."
-                        ),
-                    },
-                    {"role": "user", "content": message},
-                ],
+                "messages": messages,
                 "stream": False,
             },
             timeout=120,
@@ -61,6 +85,7 @@ def chat(request: ChatRequest):
 
         response.raise_for_status()
         data = response.json()
+
         return {"reply": data["message"]["content"]}
 
     except requests.RequestException:

@@ -151,7 +151,13 @@ function App() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: cleanMessage }),
+      body: JSON.stringify({
+        message: cleanMessage,
+        history: messages.map((item) => ({
+          role: item.role === "aura" ? "assistant" : "user",
+          content: item.text,
+        })),
+      }),
     })
 
     if (!response.ok) {
