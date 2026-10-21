@@ -29,12 +29,44 @@ def health():
     return {"status": "ok", "assistant": "AURA"}
 
 
+
 @app.post("/api/chat")
 def chat(request: ChatRequest):
+    import requests
+
     message = request.message.strip()
 
     if not message:
         return {"reply": "Please enter a message."}
 
-    # Temporary response; we'll connect the AI model later.
-    return {"reply": f"AURA received your message: {message}"}
+    try:
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            json={
+                "model": "qwen2.5:1.5b",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are AURA, a helpful personal AI assistant. "
+                            "Be friendly, clear, and concise."
+                        ),
+                    },
+                    {"role": "user", "content": message},
+                ],
+                "stream": False,
+            },
+            timeout=120,
+        )
+
+        response.raise_for_status()
+        data = response.json()
+        return {"reply": data["message"]["content"]}
+
+    except requests.RequestException:
+        return {
+            "reply": (
+                "I couldn't connect to my AI model. "
+                "Please check that Ollama is running."
+            )
+        }
